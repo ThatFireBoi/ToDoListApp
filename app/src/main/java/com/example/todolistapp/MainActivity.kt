@@ -31,7 +31,7 @@ import com.example.todolistapp.ui.theme.ToDoListAppTheme
 
 class MainActivity : ComponentActivity() {
 
-    // Create a TaskViewModel instance using by viewModels()
+    // Create a TaskViewModel instance
     private val taskViewModel: TaskViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -105,6 +105,7 @@ fun WelcomeScreen(
                 contentDescription = stringResource(id = R.string.todo_list_icon_description),
                 modifier = Modifier.size(64.dp)
             )
+            // Using MaterialTheme to ajust the text, buttons and spacing
             Spacer(modifier = Modifier.height(16.dp))
             Text("Welcome to your To-Do App!", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
