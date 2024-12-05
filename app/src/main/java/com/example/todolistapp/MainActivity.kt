@@ -132,6 +132,7 @@ fun WelcomeScreen(
                 .padding(15.dp)
                 .align(Alignment.TopStart)
         ) {
+            // Display the user information in a Card
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
                 elevation = CardDefaults.cardElevation(5.dp)
