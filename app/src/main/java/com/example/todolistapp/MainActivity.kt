@@ -1,13 +1,15 @@
 package com.example.todolistapp
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -28,38 +30,63 @@ import androidx.compose.ui.text.input.ImeAction
 import com.example.todolistapp.ui.theme.ToDoListAppTheme
 
 class MainActivity : ComponentActivity() {
+
+    // Create a TaskViewModel instance using by viewModels()
+    private val taskViewModel: TaskViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ToDoListAppTheme {
-                MyApp(modifier = Modifier.fillMaxSize())
+                MyApp(taskViewModel)
             }
         }
     }
 }
 
 @Composable
-fun MyApp(
-    modifier: Modifier = Modifier
-) {
-    // Controls the visibility of the welcome screen
-    var showWelcomeScreen by rememberSaveable { mutableStateOf(true) }
+fun MyApp(taskViewModel: TaskViewModel) {
 
-    Surface(modifier, color = MaterialTheme.colorScheme.background) {
-        if (showWelcomeScreen) {
-            WelcomeScreen(onContinueClicked = { showWelcomeScreen = false })
-        } else {
-            ToDoApp()
+    // Variables that manage the visibility of the WelcomeScreen and EditUserScreen
+    val showWelcomeScreen = rememberSaveable { mutableStateOf(true) }
+    val showEditUserScreen = rememberSaveable { mutableStateOf(false) }
+
+    Surface(color = MaterialTheme.colorScheme.background) {
+        when {
+            // Show UserScreen if true
+            showEditUserScreen.value -> {
+                EditUserScreen(taskViewModel) {
+                    showEditUserScreen.value = false
+                }
+            }
+            // Show WelcomeScreen if true
+            showWelcomeScreen.value -> {
+                WelcomeScreen(
+                    taskViewModel = taskViewModel,
+                    onContinueClicked = { showWelcomeScreen.value = false },
+                    onEditUserClicked = { showEditUserScreen.value = true }
+                )
+            }
+            // Show ToDoApp if false
+            else -> {
+                ToDoApp(taskViewModel)
+            }
         }
     }
 }
 
 @Composable
-fun WelcomeScreen(onContinueClicked: () -> Unit) {
+fun WelcomeScreen(
+    taskViewModel: TaskViewModel,
+    onContinueClicked: () -> Unit,
+    onEditUserClicked: () -> Unit
+) {
+    // Collect the user data from the TaskViewModel
+    val user = taskViewModel.user.collectAsState().value
+
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Loads background image for the welcome screen
         Image(
             painter = painterResource(id = R.drawable.background_image),
             contentDescription = null,
@@ -74,7 +101,6 @@ fun WelcomeScreen(onContinueClicked: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                // To-do icon for the welcome screen
                 painter = painterResource(id = R.drawable.ic_todo_list),
                 contentDescription = stringResource(id = R.string.todo_list_icon_description),
                 modifier = Modifier.size(64.dp)
@@ -82,21 +108,32 @@ fun WelcomeScreen(onContinueClicked: () -> Unit) {
             Spacer(modifier = Modifier.height(16.dp))
             Text("Welcome to your To-Do App!", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
+            Text("Name: ${user.name}", style = MaterialTheme.typography.bodyLarge)
+            Text("Email: ${user.email}", style = MaterialTheme.typography.bodyLarge)
+            Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onContinueClicked) {
                 Text("Continue")
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(onClick = onEditUserClicked) {
+                Text("Edit User Info")
             }
         }
     }
 }
 
 @Composable
-fun ToDoApp() {
-    // Hold the list of to-do items
-    var toDoItems by rememberSaveable { mutableStateOf(listOf<String>()) }
-    // Holds the new item text
+fun ToDoApp(taskViewModel: TaskViewModel) {
+    // Collect the toDoItems from the TaskViewModel
+    val toDoItems by taskViewModel.toDoItems.collectAsState()
     var newItem by rememberSaveable { mutableStateOf("") }
-    // Controls the visibility of the items
     var itemVisibility by rememberSaveable { mutableStateOf(mapOf<String, Boolean>()) }
+
+    // Function to delete an item from the list
+    fun deleteItem(item: String) {
+        taskViewModel.deleteItem(item)
+        itemVisibility = itemVisibility - item
+    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -108,14 +145,15 @@ fun ToDoApp() {
             modifier = Modifier.fillMaxSize()
         )
         Column(
-            modifier = Modifier.fillMaxSize().padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
             verticalArrangement = Arrangement.Top,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("To-Do App", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
             Row {
-                // Field where user enters new to-do items
                 TextField(
                     value = newItem,
                     onValueChange = { newItem = it },
@@ -127,7 +165,7 @@ fun ToDoApp() {
                     keyboardActions = KeyboardActions(
                         onDone = {
                             if (newItem.isNotBlank()) {
-                                toDoItems = toDoItems + newItem
+                                taskViewModel.addItem(newItem)
                                 itemVisibility = itemVisibility + (newItem to false)
                                 newItem = ""
                             }
@@ -137,7 +175,7 @@ fun ToDoApp() {
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = {
                     if (newItem.isNotBlank()) {
-                        toDoItems = toDoItems + newItem
+                        taskViewModel.addItem(newItem)
                         itemVisibility = itemVisibility + (newItem to false)
                         newItem = ""
                     }
@@ -146,37 +184,85 @@ fun ToDoApp() {
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            // List of to-do items
             ToDoList(
                 items = toDoItems,
                 itemVisibility = itemVisibility,
                 onItemAdded = { item: String ->
                     itemVisibility = itemVisibility + (item to true)
-                })
+                },
+                onDeleteItem = { item: String ->
+                    deleteItem(item)
+                }
+            )
         }
     }
 }
 
 @Composable
-fun ToDoList(items: List<String>, itemVisibility: Map<String, Boolean>, onItemAdded: (String) -> Unit, modifier: Modifier = Modifier) {
-    // LazyColumn to display the list of to-do items
+fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit) {
+    val user = taskViewModel.user.collectAsState().value
+    var name by rememberSaveable { mutableStateOf(user.name) }
+    var email by rememberSaveable { mutableStateOf(user.email) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TextField(
+            value = name,
+            onValueChange = { name = it },
+            label = { Text("Name") }
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        TextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Button(onClick = {
+            taskViewModel.updateUser(name, email)
+            onSaveClicked()
+        }) {
+            Text("Save")
+        }
+    }
+}
+
+@Composable
+fun ToDoList(
+    items: List<String>,
+    itemVisibility: Map<String, Boolean>,
+    onItemAdded: (String) -> Unit,
+    onDeleteItem: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     LazyColumn(modifier = modifier) {
         itemsIndexed(items) { index, item ->
-            ToDoItem(index + 1, item, itemVisibility[item] ?: false, onItemAdded)
+            ToDoItem(index + 1, item, itemVisibility[item] ?: false, onItemAdded, onDeleteItem)
         }
     }
 }
 
 @Composable
-fun ToDoItem(index: Int, item: String, visible: Boolean, onItemAdded: (String) -> Unit, modifier: Modifier = Modifier) {
-    val backgroundColor = if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
+fun ToDoItem(
+    index: Int,
+    item: String,
+    visible: Boolean,
+    onItemAdded: (String) -> Unit,
+    onDeleteItem: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val backgroundColor =
+        if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
 
-    // When the item is added, call the onItemAdded callback
     LaunchedEffect(item) {
         onItemAdded(item)
     }
 
-    // Animations for the items
     AnimatedVisibility(
         visible = visible,
         enter = scaleIn(
@@ -201,7 +287,6 @@ fun ToDoItem(index: Int, item: String, visible: Boolean, onItemAdded: (String) -
         ) {
             Row(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    // Determine the item's position in the list
                     text = "$index. ",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.align(Alignment.CenterVertically)
@@ -211,6 +296,13 @@ fun ToDoItem(index: Int, item: String, visible: Boolean, onItemAdded: (String) -
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.align(Alignment.CenterVertically)
                 )
+                Spacer(modifier = Modifier.weight(1f))
+                IconButton(onClick = { onDeleteItem(item) }) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_delete),
+                        contentDescription = "Delete"
+                    )
+                }
             }
         }
     }
@@ -220,6 +312,6 @@ fun ToDoItem(index: Int, item: String, visible: Boolean, onItemAdded: (String) -
 @Composable
 fun MyAppPreview() {
     ToDoListAppTheme {
-        MyApp(Modifier.fillMaxSize())
+        MyApp(TaskViewModel())
     }
 }
