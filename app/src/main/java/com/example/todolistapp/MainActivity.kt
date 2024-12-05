@@ -144,14 +144,26 @@ fun WelcomeScreen(
                 Column(
                     modifier = Modifier.padding(17.dp)
                 ) {
-                    Text(
-                        text = "Name: ${user.name}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = "Email: ${user.email}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_avatar),
+                            contentDescription = "Avatar",
+                            modifier = Modifier.size(24.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column(
+                            modifier = Modifier.padding(17.dp)
+                        ) {
+                            Text(
+                                text = "Name: ${user.name}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                            Text(
+                                text = "Email: ${user.email}",
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -221,7 +233,11 @@ fun ToDoApp(taskViewModel: TaskViewModel, onTaskClicked: (Int) -> Unit) {
 }
 
 @Composable
-fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit, onCancelClicked: () -> Unit) {
+fun EditUserScreen(
+    taskViewModel: TaskViewModel,
+    onSaveClicked: () -> Unit,
+    onCancelClicked: () -> Unit
+) {
     val user = taskViewModel.user.collectAsState().value
     // Variables to hold the name and email input values
     var name by rememberSaveable { mutableStateOf(user.name) }
@@ -269,7 +285,11 @@ fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit, onCa
 }
 
 @Composable
-fun TaskDetailsScreen(taskViewModel: TaskViewModel, taskIndex: Int, onSaveClicked: () -> Unit) {
+fun TaskDetailsScreen(
+    taskViewModel: TaskViewModel,
+    taskIndex: Int,
+    onSaveClicked: () -> Unit
+) {
     // Get the task details from the TaskViewModel
     val task = taskViewModel.tasks.collectAsState().value[taskIndex]
     // State variable to hold the task details
