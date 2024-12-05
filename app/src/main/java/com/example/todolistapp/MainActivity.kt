@@ -110,6 +110,7 @@ fun WelcomeScreen(
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Spacer(modifier = Modifier.height(16.dp))
             Icon(
                 painter = painterResource(id = R.drawable.ic_todo_list),
                 contentDescription = stringResource(id = R.string.todo_list_icon_description),
@@ -118,15 +119,35 @@ fun WelcomeScreen(
             Spacer(modifier = Modifier.height(16.dp))
             Text("Welcome to your To-Do App!", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Name: ${user.name}", style = MaterialTheme.typography.bodyLarge)
-            Text("Email: ${user.email}", style = MaterialTheme.typography.bodyLarge)
-            Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onContinueClicked) {
                 Text("Continue")
             }
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = onEditUserClicked) {
                 Text("Edit User Info")
+            }
+        }
+        Box(
+            modifier = Modifier
+                .padding(15.dp)
+                .align(Alignment.TopStart)
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondary),
+                elevation = CardDefaults.cardElevation(5.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(17.dp)
+                ) {
+                    Text(
+                        text = "Name: ${user.name}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Text(
+                        text = "Email: ${user.email}",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
     }
