@@ -8,13 +8,15 @@ import kotlinx.coroutines.launch
 
 // Represents a user with a name and an email
 data class User(val name: String, val email: String)
+// Represents a task with a title and details
+data class Task(val title: String, val details: String = "")
 
 class TaskViewModel : ViewModel() {
     private val _user = MutableStateFlow(User("Gabriel Castro", "gabriel@example.com"))
     val user: StateFlow<User> = _user
 
-    private val _toDoItems = MutableStateFlow(listOf<String>())
-    val toDoItems: StateFlow<List<String>> = _toDoItems
+    private val _tasks = MutableStateFlow(listOf<Task>())
+    val tasks: StateFlow<List<Task>> = _tasks
 
     // Updates the user's name and email
     fun updateUser(name: String, email: String) {
@@ -23,17 +25,26 @@ class TaskViewModel : ViewModel() {
         }
     }
 
-    // Adds an item to the to-do list
-    fun addItem(item: String) {
+    // Adds a task to the list
+    fun addTask(title: String) {
         viewModelScope.launch {
-            _toDoItems.value = _toDoItems.value + item
+            _tasks.value = _tasks.value + Task(title)
         }
     }
 
-    // Deletes an item from the to-do list
-    fun deleteItem(item: String) {
+    // Updates the details of a task
+    fun updateTaskDetails(index: Int, details: String) {
         viewModelScope.launch {
-            _toDoItems.value = _toDoItems.value.filter { it != item }
+            _tasks.value = _tasks.value.mapIndexed { i, task ->
+                if (i == index) task.copy(details = details) else task
+            }
+        }
+    }
+
+    // Deletes a task from the list
+    fun deleteTask(index: Int) {
+        viewModelScope.launch {
+            _tasks.value = _tasks.value.toMutableList().apply { removeAt(index) }
         }
     }
 }

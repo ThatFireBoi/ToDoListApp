@@ -22,6 +22,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.res.painterResource
@@ -31,7 +32,7 @@ import com.example.todolistapp.ui.theme.ToDoListAppTheme
 
 class MainActivity : ComponentActivity() {
 
-    // Create a TaskViewModel instance
+    // Create a TaskViewModel instance by using viewModels
     private val taskViewModel: TaskViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -47,13 +48,20 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MyApp(taskViewModel: TaskViewModel) {
 
-    // Variables that manage the visibility of the WelcomeScreen and EditUserScreen
+    // Variables that manage the visibility of the WelcomeScreen, EditUserScreen and TaskDetailsScreen
     val showWelcomeScreen = rememberSaveable { mutableStateOf(true) }
     val showEditUserScreen = rememberSaveable { mutableStateOf(false) }
+    val showTaskDetailsScreen = rememberSaveable { mutableStateOf<Pair<Boolean, Int>?>(null) }
 
     Surface(color = MaterialTheme.colorScheme.background) {
         when {
-            // Show UserScreen if true
+            // Show TaskDetailsScreen if true
+            showTaskDetailsScreen.value?.first == true -> {
+                TaskDetailsScreen(taskViewModel, showTaskDetailsScreen.value!!.second) {
+                    showTaskDetailsScreen.value = null
+                }
+            }
+            // Show EditUserScreen if true
             showEditUserScreen.value -> {
                 EditUserScreen(taskViewModel) {
                     showEditUserScreen.value = false
@@ -69,7 +77,9 @@ fun MyApp(taskViewModel: TaskViewModel) {
             }
             // Show ToDoApp if false
             else -> {
-                ToDoApp(taskViewModel)
+                ToDoApp(taskViewModel) { taskIndex ->
+                    showTaskDetailsScreen.value = Pair(true, taskIndex)
+                }
             }
         }
     }
@@ -105,7 +115,6 @@ fun WelcomeScreen(
                 contentDescription = stringResource(id = R.string.todo_list_icon_description),
                 modifier = Modifier.size(64.dp)
             )
-            // Using MaterialTheme to ajust the text, buttons and spacing
             Spacer(modifier = Modifier.height(16.dp))
             Text("Welcome to your To-Do App!", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
@@ -124,17 +133,10 @@ fun WelcomeScreen(
 }
 
 @Composable
-fun ToDoApp(taskViewModel: TaskViewModel) {
-    // Collect the toDoItems from the TaskViewModel
-    val toDoItems by taskViewModel.toDoItems.collectAsState()
+fun ToDoApp(taskViewModel: TaskViewModel, onTaskClicked: (Int) -> Unit) {
+    // Observe the list of tasks from the TaskViewModel
+    val tasks by taskViewModel.tasks.collectAsState()
     var newItem by rememberSaveable { mutableStateOf("") }
-    var itemVisibility by rememberSaveable { mutableStateOf(mapOf<String, Boolean>()) }
-
-    // Function to delete an item from the list
-    fun deleteItem(item: String) {
-        taskViewModel.deleteItem(item)
-        itemVisibility = itemVisibility - item
-    }
 
     Box(
         modifier = Modifier.fillMaxSize()
@@ -166,8 +168,7 @@ fun ToDoApp(taskViewModel: TaskViewModel) {
                     keyboardActions = KeyboardActions(
                         onDone = {
                             if (newItem.isNotBlank()) {
-                                taskViewModel.addItem(newItem)
-                                itemVisibility = itemVisibility + (newItem to false)
+                                taskViewModel.addTask(newItem)
                                 newItem = ""
                             }
                         }
@@ -176,8 +177,7 @@ fun ToDoApp(taskViewModel: TaskViewModel) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = {
                     if (newItem.isNotBlank()) {
-                        taskViewModel.addItem(newItem)
-                        itemVisibility = itemVisibility + (newItem to false)
+                        taskViewModel.addTask(newItem)
                         newItem = ""
                     }
                 }) {
@@ -185,16 +185,11 @@ fun ToDoApp(taskViewModel: TaskViewModel) {
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
-            ToDoList(
-                items = toDoItems,
-                itemVisibility = itemVisibility,
-                onItemAdded = { item: String ->
-                    itemVisibility = itemVisibility + (item to true)
-                },
-                onDeleteItem = { item: String ->
-                    deleteItem(item)
+            LazyColumn {
+                itemsIndexed(tasks) { index, task ->
+                    ToDoItem(index, task, onTaskClicked, taskViewModel::deleteTask)
                 }
-            )
+            }
         }
     }
 }
@@ -202,9 +197,11 @@ fun ToDoApp(taskViewModel: TaskViewModel) {
 @Composable
 fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit) {
     val user = taskViewModel.user.collectAsState().value
+    // Variables to hold the name and email input values
     var name by rememberSaveable { mutableStateOf(user.name) }
     var email by rememberSaveable { mutableStateOf(user.email) }
 
+    // Layout for the Edit User screen
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -212,18 +209,21 @@ fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // TextField for editing the user's name
         TextField(
             value = name,
             onValueChange = { name = it },
             label = { Text("Name") }
         )
         Spacer(modifier = Modifier.height(8.dp))
+        // TextField for editing the user's email
         TextField(
             value = email,
             onValueChange = { email = it },
             label = { Text("Email") }
         )
         Spacer(modifier = Modifier.height(16.dp))
+        // Button to save the updated user information
         Button(onClick = {
             taskViewModel.updateUser(name, email)
             onSaveClicked()
@@ -234,16 +234,35 @@ fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit) {
 }
 
 @Composable
-fun ToDoList(
-    items: List<String>,
-    itemVisibility: Map<String, Boolean>,
-    onItemAdded: (String) -> Unit,
-    onDeleteItem: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    LazyColumn(modifier = modifier) {
-        itemsIndexed(items) { index, item ->
-            ToDoItem(index + 1, item, itemVisibility[item] ?: false, onItemAdded, onDeleteItem)
+fun TaskDetailsScreen(taskViewModel: TaskViewModel, taskIndex: Int, onSaveClicked: () -> Unit) {
+    // Get the task details from the TaskViewModel
+    val task = taskViewModel.tasks.collectAsState().value[taskIndex]
+    // State variable to hold the task details
+    var details by rememberSaveable { mutableStateOf(task.details) }
+
+    // Layout for the Task Details screen
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // Display the task title
+        Text("Task: ${task.title}", style = MaterialTheme.typography.headlineMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+        TextField(
+            value = details,
+            onValueChange = { details = it },
+            label = { Text("Details") }
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        // Button to save the updated task details
+        Button(onClick = {
+            taskViewModel.updateTaskDetails(taskIndex, details)
+            onSaveClicked()
+        }) {
+            Text("Save")
         }
     }
 }
@@ -251,21 +270,25 @@ fun ToDoList(
 @Composable
 fun ToDoItem(
     index: Int,
-    item: String,
-    visible: Boolean,
-    onItemAdded: (String) -> Unit,
-    onDeleteItem: (String) -> Unit,
+    task: Task,
+    onTaskClicked: (Int) -> Unit,
+    onDeleteTask: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Set the background color of the card based on the index
     val backgroundColor =
         if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
 
-    LaunchedEffect(item) {
-        onItemAdded(item)
+    var isVisible by remember { mutableStateOf(false) }
+
+    // Set the visibility of the card to true when the task is launched
+    LaunchedEffect(task) {
+        isVisible = true
     }
 
+    // Animate the visibility of the card
     AnimatedVisibility(
-        visible = visible,
+        visible = isVisible,
         enter = scaleIn(
             animationSpec = tween(
                 durationMillis = 250,
@@ -279,26 +302,23 @@ fun ToDoItem(
             )
         )
     ) {
+        // Card to display the task title
         Card(
             colors = CardDefaults.cardColors(containerColor = backgroundColor),
             modifier = modifier
                 .padding(vertical = 4.dp, horizontal = 8.dp)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .clickable { onTaskClicked(index) },
             elevation = CardDefaults.cardElevation(4.dp)
         ) {
             Row(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "$index. ",
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.align(Alignment.CenterVertically)
-                )
-                Text(
-                    text = item,
+                    text = "${index + 1}. ${task.title}",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.align(Alignment.CenterVertically)
                 )
                 Spacer(modifier = Modifier.weight(1f))
-                IconButton(onClick = { onDeleteItem(item) }) {
+                IconButton(onClick = { onDeleteTask(index) }) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_delete),
                         contentDescription = "Delete"
