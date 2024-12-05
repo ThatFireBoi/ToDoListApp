@@ -1,6 +1,7 @@
 package com.example.todolistapp
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
@@ -25,6 +26,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -224,6 +226,7 @@ fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit, onCa
     // Variables to hold the name and email input values
     var name by rememberSaveable { mutableStateOf(user.name) }
     var email by rememberSaveable { mutableStateOf(user.email) }
+    val context = LocalContext.current
 
     // Layout for the Edit User screen
     Column(
@@ -251,6 +254,8 @@ fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit, onCa
         Row {
             Button(onClick = {
                 taskViewModel.updateUser(name, email)
+                // Show a toast message when the user details are updated
+                Toast.makeText(context, "User details updated", Toast.LENGTH_SHORT).show()
                 onSaveClicked()
             }) {
                 Text("Save")
