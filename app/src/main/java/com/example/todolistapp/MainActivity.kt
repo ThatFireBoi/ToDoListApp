@@ -63,9 +63,11 @@ fun MyApp(taskViewModel: TaskViewModel) {
             }
             // Show EditUserScreen if true
             showEditUserScreen.value -> {
-                EditUserScreen(taskViewModel) {
-                    showEditUserScreen.value = false
-                }
+                EditUserScreen(
+                    taskViewModel,
+                    onSaveClicked = { showEditUserScreen.value = false },
+                    onCancelClicked = { showEditUserScreen.value = false }
+                )
             }
             // Show WelcomeScreen if true
             showWelcomeScreen.value -> {
@@ -217,7 +219,7 @@ fun ToDoApp(taskViewModel: TaskViewModel, onTaskClicked: (Int) -> Unit) {
 }
 
 @Composable
-fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit) {
+fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit, onCancelClicked: () -> Unit) {
     val user = taskViewModel.user.collectAsState().value
     // Variables to hold the name and email input values
     var name by rememberSaveable { mutableStateOf(user.name) }
@@ -245,12 +247,18 @@ fun EditUserScreen(taskViewModel: TaskViewModel, onSaveClicked: () -> Unit) {
             label = { Text("Email") }
         )
         Spacer(modifier = Modifier.height(16.dp))
-        // Button to save the updated user information
-        Button(onClick = {
-            taskViewModel.updateUser(name, email)
-            onSaveClicked()
-        }) {
-            Text("Save")
+        // Buttons to save or cancel the updated user information
+        Row {
+            Button(onClick = {
+                taskViewModel.updateUser(name, email)
+                onSaveClicked()
+            }) {
+                Text("Save")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(onClick = onCancelClicked) {
+                Text("Cancel")
+            }
         }
     }
 }
