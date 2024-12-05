@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
 fun MyApp(
     modifier: Modifier = Modifier
 ) {
+    // Controls the visibility of the welcome screen
     var showWelcomeScreen by rememberSaveable { mutableStateOf(true) }
 
     Surface(modifier, color = MaterialTheme.colorScheme.background) {
@@ -58,6 +59,7 @@ fun WelcomeScreen(onContinueClicked: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
+        // Loads background image for the welcome screen
         Image(
             painter = painterResource(id = R.drawable.background_image),
             contentDescription = null,
@@ -72,6 +74,7 @@ fun WelcomeScreen(onContinueClicked: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
+                // To-do icon for the welcome screen
                 painter = painterResource(id = R.drawable.ic_todo_list),
                 contentDescription = stringResource(id = R.string.todo_list_icon_description),
                 modifier = Modifier.size(64.dp)
@@ -88,8 +91,11 @@ fun WelcomeScreen(onContinueClicked: () -> Unit) {
 
 @Composable
 fun ToDoApp() {
+    // Hold the list of to-do items
     var toDoItems by rememberSaveable { mutableStateOf(listOf<String>()) }
+    // Holds the new item text
     var newItem by rememberSaveable { mutableStateOf("") }
+    // Controls the visibility of the items
     var itemVisibility by rememberSaveable { mutableStateOf(mapOf<String, Boolean>()) }
 
     Box(
@@ -109,6 +115,7 @@ fun ToDoApp() {
             Text("To-Do App", style = MaterialTheme.typography.headlineMedium)
             Spacer(modifier = Modifier.height(16.dp))
             Row {
+                // Field where user enters new to-do items
                 TextField(
                     value = newItem,
                     onValueChange = { newItem = it },
@@ -139,6 +146,7 @@ fun ToDoApp() {
                 }
             }
             Spacer(modifier = Modifier.height(16.dp))
+            // List of to-do items
             ToDoList(
                 items = toDoItems,
                 itemVisibility = itemVisibility,
@@ -151,6 +159,7 @@ fun ToDoApp() {
 
 @Composable
 fun ToDoList(items: List<String>, itemVisibility: Map<String, Boolean>, onItemAdded: (String) -> Unit, modifier: Modifier = Modifier) {
+    // LazyColumn to display the list of to-do items
     LazyColumn(modifier = modifier) {
         itemsIndexed(items) { index, item ->
             ToDoItem(index + 1, item, itemVisibility[item] ?: false, onItemAdded)
@@ -162,10 +171,12 @@ fun ToDoList(items: List<String>, itemVisibility: Map<String, Boolean>, onItemAd
 fun ToDoItem(index: Int, item: String, visible: Boolean, onItemAdded: (String) -> Unit, modifier: Modifier = Modifier) {
     val backgroundColor = if (index % 2 == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
 
+    // When the item is added, call the onItemAdded callback
     LaunchedEffect(item) {
         onItemAdded(item)
     }
 
+    // Animations for the items
     AnimatedVisibility(
         visible = visible,
         enter = scaleIn(
@@ -190,6 +201,7 @@ fun ToDoItem(index: Int, item: String, visible: Boolean, onItemAdded: (String) -
         ) {
             Row(modifier = Modifier.padding(16.dp)) {
                 Text(
+                    // Determine the item's position in the list
                     text = "$index. ",
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.align(Alignment.CenterVertically)
